@@ -48,7 +48,8 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
 
 * Task distribution algorithm implementation which distributes the tasks to each robot(Load balancer).
     
-    * Add more details as project progress
+    * Use zeroMQ to distribute navigation task
+    * 
 
 
 * Shared memory module which acts as open source of information which is available to entire system including robots.
