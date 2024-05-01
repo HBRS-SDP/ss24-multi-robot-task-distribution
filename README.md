@@ -48,13 +48,14 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
 
 * Task distribution algorithm implementation which distributes the tasks to each robot(Load balancer).
     
-    * Use zeroMQ to distribute navigation task
-    * 
+    * Design and implement load balancer with ZeroMQ
+    * Test load balancing in task distribution
+
+      
 
 
 * Shared memory module which acts as open source of information which is available to entire system including robots.
     * No of items on each shelves must be universal knowledge for system
-    
     * Analytical data such as Real Arrival time, Estimated Arrival time, Start positions and end positions, No of parcels dropped.
 
 
