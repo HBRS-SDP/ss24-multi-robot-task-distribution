@@ -30,10 +30,10 @@ class WarehouseManager:
         }
 
     def start(self):
-        self.orders = self.load_orders('sample_orders.csv')
+        self.orders = self.load_orders('data/sample_orders.csv')
 
         # Initialize the CSV file for logging tasks
-        with open('robot_assignments.csv', 'w', newline='') as csvfile:
+        with open('data/robot_assignments.csv', 'w', newline='') as csvfile:
             fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelves', 'item_quantities']
             self.writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             self.writer.writeheader()
@@ -51,7 +51,7 @@ class WarehouseManager:
             
             if task:
                 # Log the task assignment to the CSV file
-                with open('robot_assignments.csv', 'a', newline='') as csvfile:
+                with open('data/robot_assignments.csv', 'a', newline='') as csvfile:
                     writer = csv.DictWriter(csvfile, fieldnames=self.writer.fieldnames)
                     writer.writerow({
                         'timestamp': time.time(),

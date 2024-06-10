@@ -17,10 +17,10 @@ class WarehouseManager:
         rospy.init_node('warehouse_manager', anonymous=True)
 
         # Inventory management
+        self.inventory = {}  # Dictionary to keep track of items on shelves
+        self.shelves = {}
+        self.read_inventory_init_status('data/shelves_details.csv')
 
-        self.inventory = {'A': 200, 'B': 300}  # Dictionary to keep track of items on shelves
-        self.shelves = {'A': {'x': 0.0, 'y': 0.0, 'w': 0.0},
-                        'B': {'x': 10.0, 'y': 10.0, 'w': 10.0}}
         self.drop_counter = {'x': 20.0, 'y': 20.0, 'w': 20.0}
 
         # Robot status and availability
@@ -47,7 +47,18 @@ class WarehouseManager:
         # Main loop
         self.main_loop()
 
-
+    def read_inventory_init_status(self, filename):
+        with open(filename, 'r') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                shelf_name = row['Shelf']
+                item_quantity = int(row['Quantity'])
+                self.inventory[shelf_name] = item_quantity
+                self.shelves[shelf_name] = {
+                    'x': float(row['X']),
+                    'y': float(row['Y']),
+                    'w': float(row['W'])
+                }
 
     def initialize_robots(self, num_robots):
         for i in range(num_robots):
@@ -109,7 +120,7 @@ class WarehouseManager:
         rospy.loginfo(f"Requested new task from task distributor for robot {robot_id}")
 
         # assign client order to robot
-        self.robots[robot_id].assign_order(response.client_id, response.shelves, response.item_quantities)
+        self.robots[robot_id].assign_order(response['client_id'], response['shelves'], response['item_quantities'])
         # set the next goal destination
         destination_shelf = self.robots[robot_id].shelves.pop(0)
         self.robots[robot_id].set_goal(destination_shelf, self.shelves[destination_shelf])
