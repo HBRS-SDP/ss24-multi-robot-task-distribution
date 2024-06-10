@@ -2,6 +2,7 @@
 
 import rospy
 from std_msgs.msg import String, Int32
+from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty, EmptyRequest
 from robot_status import RobotState
 from ss24_multi_robot_task_distribution.srv import TaskService
@@ -20,15 +21,19 @@ class WarehouseManager:
         self.drop_counter = {'x': 20.0, 'y': 20.0, 'w': 20.0}
 
         # Robot status and availability
+        self.num_robots = 4
         self.robots = []
-        self.initialize_robots(4)
+        self.initialize_robots(self.num_robots)
 
         # Subscribers
         rospy.Subscriber('/pickup', Int32, self.handle_pickup)
         rospy.Subscriber('/drop', Int32, self.handle_drop)
 
         # Publishers
-        self.goal_pub = rospy.Publisher('/goal', ShelfGoalPose, queue_size=10)
+        self.goal_publishers = {}
+        for robot_id in range(0, self.num_robots):
+            topic_name = f'/robot{robot_id}/goal'
+            self.goal_publishers[robot_id] = rospy.Publisher(topic_name, PoseStamped, queue_size=10)
 
         # Service clients
         self.task_client = rospy.ServiceProxy('/task_distributor/get_task', TaskService)
@@ -66,13 +71,24 @@ class WarehouseManager:
             self.robots[msg.data].available = True
 
     def publish_goal(self, robot):
-        goal_msg = ShelfGoalPose()
-        goal_msg.robot_id = robot.id
-        goal_msg.x = robot.goal['x']
-        goal_msg.y = robot.goal['y']
-        goal_msg.w = robot.goal['w']
-        goal_msg.items = robot.goal['items']
-        self.goal_pub.publish(goal_msg)
+        goal = PoseStamped()
+        goal.pose.position.x = robot.goal['x']
+        goal.pose.position.y = robot.goal['y']
+        goal.pose.position.z = 0.0
+        goal.header.frame_id = 'map'  # Adjust according to your frame
+        self.goal_publishers[robot.id].publish(goal)
+
+        # below is a custom msg to publish goal. maybe used later when we actually add pick up functionality to
+        # robot. Right now the robot does not have manipulation capabilities to pick up. we just make it wait and
+        # assume it has picked up
+
+        # goal_msg = ShelfGoalPose()
+        # goal_msg.robot_id = robot.id
+        # goal_msg.x = robot.goal['x']
+        # goal_msg.y = robot.goal['y']
+        # goal_msg.w = robot.goal['w']
+        # goal_msg.items = robot.goal['items']
+        # self.goal_pub.publish(goal_msg)
         rospy.loginfo(f"Published goal for {robot.id}")
 
     def request_task(self, robot_id):
