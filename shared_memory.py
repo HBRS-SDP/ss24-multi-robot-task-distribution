@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import rospy
+import zmq
+import csv
 from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty, EmptyRequest
@@ -15,6 +17,7 @@ class WarehouseManager:
         rospy.init_node('warehouse_manager', anonymous=True)
 
         # Inventory management
+
         self.inventory = {'A': 200, 'B': 300}  # Dictionary to keep track of items on shelves
         self.shelves = {'A': {'x': 0.0, 'y': 0.0, 'w': 0.0},
                         'B': {'x': 10.0, 'y': 10.0, 'w': 10.0}}
@@ -36,10 +39,15 @@ class WarehouseManager:
             self.goal_publishers[robot_id] = rospy.Publisher(topic_name, PoseStamped, queue_size=10)
 
         # Service clients
-        self.task_client = rospy.ServiceProxy('/task_distributor/get_task', TaskService)
+        # self.task_client = rospy.ServiceProxy('/task_distributor/get_task', TaskService)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REQ)
+        self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
 
         # Main loop
         self.main_loop()
+
+
 
     def initialize_robots(self, num_robots):
         for i in range(num_robots):
@@ -95,9 +103,11 @@ class WarehouseManager:
         task_request = TaskRequest()
         task_request.robot_id = robot_id
 
-        # Call the service client with the TaskRequest message object
-        response = self.task_client(task_request).response
+        # Call the task distributor with zmq
+        self.socket.send_json({'robot_id': robot_id})
+        response = self.socket.recv_json()
         rospy.loginfo(f"Requested new task from task distributor for robot {robot_id}")
+
         # assign client order to robot
         self.robots[robot_id].assign_order(response.client_id, response.shelves, response.item_quantities)
         # set the next goal destination
