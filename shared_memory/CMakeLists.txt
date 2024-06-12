@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ss24_multi_robot_task_distribution)
+project(shared_memory)
 
 find_package(catkin REQUIRED COMPONENTS rospy)
 
@@ -16,14 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   ShelfGoalPose.msg
-  TaskRequest.msg
-  TaskResponse.msg
 )
 
-add_service_files(
-    FILES
-    TaskService.srv
-)
 
 generate_messages(
   DEPENDENCIES
