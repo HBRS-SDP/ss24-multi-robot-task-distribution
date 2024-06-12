@@ -1,0 +1,4 @@
+goal_x,goal_y,orientation_z,orientation_w
+0.8,-0.5,0.0,1.0
+-0.8,-0.5,0.0,-1.0
+0.5,0.5,0.0,1.0

@@ -1,4 +1,4 @@
-<robot name="test_robot">
+<robot name="mbot_ranger">
 
   <link name="base_footprint">
     <visual>
