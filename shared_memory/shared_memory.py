@@ -23,7 +23,7 @@ class WarehouseManager:
         self.read_inventory_init_status('data/shelves_details.csv')
 
         # Robot status and availability
-        self.num_robots = 4
+        self.num_robots = 1
         self.robots = []
         self.initialize_robots(self.num_robots)
 
@@ -34,7 +34,7 @@ class WarehouseManager:
         self.goal_publishers = {}
         for robot_id in range(0, self.num_robots):
             topic_name = f'/robot{robot_id}/goal'
-            self.goal_publishers[robot_id] = rospy.Publisher(topic_name, PoseStamped, queue_size=10)
+            self.goal_publishers[robot_id] = rospy.Publisher(topic_name, PoseStamped, queue_size=10, latch = True)
 
         # Service clients
         # self.task_client = rospy.ServiceProxy('/task_distributor/get_task', TaskService)
@@ -98,11 +98,12 @@ class WarehouseManager:
 
     def publish_goal(self, robot):
         goal = PoseStamped()
+        goal.header.frame_id = 'map'
+        goal.header.stamp = rospy.Time.now()
         goal.pose.position.x = robot.goal['x']
         goal.pose.position.y = robot.goal['y']
         goal.pose.orientation.z = robot.goal['z']
         goal.pose.orientation.w = robot.goal['w']
-        goal.header.frame_id = 'map'  # Adjust according to your frame
         self.goal_publishers[robot.id].publish(goal)
 
         # below is a custom msg to publish goal. maybe used later when we actually add pick up functionality to
