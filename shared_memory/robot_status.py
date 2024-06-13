@@ -7,6 +7,10 @@ class RobotState:
         self.items = None
         self.current_pose = None
         self.goal = None
+        self.pickup = None
+        self.start_time = None
+        self.pickup_time = None
+        self.drop_time = None
 
     def update_availability(self, availability):
         self.available = availability
@@ -18,6 +22,7 @@ class RobotState:
         else:
             self.goal = {'x': goal_pose['x'], 'y':goal_pose['y'], 'w':goal_pose['w'], 'shelf': shelf,
                          'items': self.items[shelf]}
+            self.pickup = shelf
 
     def assign_order(self, clientID, shelves, item_quantities):
         self.clientID = clientID

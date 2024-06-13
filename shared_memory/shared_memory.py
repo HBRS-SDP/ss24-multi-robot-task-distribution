@@ -3,6 +3,7 @@
 import rospy
 import zmq
 import csv
+from datetime import datetime
 from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseStamped
 from std_srvs.srv import Empty, EmptyRequest
@@ -44,6 +45,8 @@ class WarehouseManager:
         self.socket = self.context.socket(zmq.REQ)
         self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
 
+        self.writer = None
+
         # Main loop
         self.main_loop()
 
@@ -66,6 +69,7 @@ class WarehouseManager:
 
     def handle_pickup(self, msg):
         rospy.loginfo(f"robot {msg.data} picked up")
+        self.robots[msg.data].pickup_time = datetime.now()
         shelf_id = self.robots[msg.data].goal['shelf']
         self.inventory[shelf_id] -= self.robots[msg.data].goal['items']
         rospy.loginfo(f"items left in {shelf_id} are {self.inventory[shelf_id]}")
@@ -78,6 +82,22 @@ class WarehouseManager:
 
     def handle_drop(self, msg):
         rospy.loginfo(f"robot {msg.data} dropped")
+        robot_id = msg.data
+        self.robots[robot_id].drop_time = datetime.now()
+        with open('log.csv', 'a', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=self.writer.fieldnames)
+            writer.writerow({
+                'timestamp': datetime.now(),
+                'robot_id': robot_id,
+                'client_id': self.robots[robot_id].clientID,
+                'shelf':self.robots[robot_id].pickup,
+                'item_quantities':self.robots[robot_id].items[self.robots[robot_id].pickup],
+                'start_time':self.robots[robot_id].start_time,
+                'pickup_time':self.robots[robot_id].pickup_time,
+                'drop_time':self.robots[robot_id].drop_time
+            })
+            csvfile.flush()
+
         if len(self.robots[msg.data].shelves) > 0:
             destination_shelf = self.robots[msg.data].shelves.pop(0)
             self.robots[msg.data].set_goal(destination_shelf, self.shelves[destination_shelf])
@@ -130,6 +150,7 @@ class WarehouseManager:
         self.publish_goal(self.robots[robot_id])
         self.robots[robot_id].available = False
         rospy.loginfo(f"Next destination for robot {robot_id} is {destination_shelf}")
+        self.robots[robot_id].start_time = datetime.now()
 
     def calculate_eta(self, destination):
         # Mockup ETA calculation
@@ -137,6 +158,11 @@ class WarehouseManager:
         rospy.loginfo(f"Calculated ETA to shelf {destination}: {eta} seconds")
 
     def main_loop(self):
+        print('create')
+        with open('log.csv', 'w', newline='') as csvfile:
+            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantities', 'start_time', 'pickup_time', 'drop_time']
+            self.writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            self.writer.writeheader()
         rate = rospy.Rate(1)  # 1 Hz
         while not rospy.is_shutdown():
             for robot in self.robots:
