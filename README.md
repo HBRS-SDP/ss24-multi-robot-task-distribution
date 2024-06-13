@@ -76,10 +76,9 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
 
  * You need ROS Noetic version to use these packages.
 
+# Simulation
 
 
 
-
-# INPROGRESS  
  
 
