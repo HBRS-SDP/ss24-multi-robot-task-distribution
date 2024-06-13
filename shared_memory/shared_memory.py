@@ -22,16 +22,13 @@ class WarehouseManager:
         self.shelves = {}
         self.read_inventory_init_status('data/shelves_details.csv')
 
-        self.drop_counter = {'x': 20.0, 'y': 20.0, 'w': 20.0}
-
         # Robot status and availability
         self.num_robots = 4
         self.robots = []
         self.initialize_robots(self.num_robots)
 
         # Subscribers
-        rospy.Subscriber('/pickup', Int32, self.handle_pickup)
-        rospy.Subscriber('/drop', Int32, self.handle_drop)
+        rospy.Subscriber('/goal_reached', Int32, self.handle_goal_reached)
 
         # Publishers
         self.goal_publishers = {}
@@ -60,6 +57,7 @@ class WarehouseManager:
                 self.shelves[shelf_name] = {
                     'x': float(row['X']),
                     'y': float(row['Y']),
+                    'z': float(row['Z']),
                     'w': float(row['W'])
                 }
 
@@ -67,53 +65,43 @@ class WarehouseManager:
         for i in range(num_robots):
             self.robots.append(RobotState(i))
 
-    def handle_pickup(self, msg):
-        rospy.loginfo(f"robot {msg.data} picked up")
-        self.robots[msg.data].pickup_time = datetime.now()
-        shelf_id = self.robots[msg.data].goal['shelf']
-        self.inventory[shelf_id] -= self.robots[msg.data].goal['items']
-        rospy.loginfo(f"items left in {shelf_id} are {self.inventory[shelf_id]}")
-        self.robots[msg.data].set_goal(shelf_id, self.drop_counter, True)
-        # calculate the ETA
-        self.calculate_eta('drop_counter')
-        # publish goal
-        self.publish_goal(self.robots[msg.data])
-        rospy.loginfo(f"Next destination for robot {msg.data} is drop_counter")
-
-    def handle_drop(self, msg):
-        rospy.loginfo(f"robot {msg.data} dropped")
+    def handle_goal_reached(self, msg):
         robot_id = msg.data
-        self.robots[robot_id].drop_time = datetime.now()
+        shelf = self.robots[robot_id].goal['shelf']
+        rospy.loginfo(f"robot {msg.data} reached {shelf}")
         with open('log.csv', 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.writer.fieldnames)
             writer.writerow({
                 'timestamp': datetime.now(),
                 'robot_id': robot_id,
                 'client_id': self.robots[robot_id].clientID,
-                'shelf':self.robots[robot_id].pickup,
-                'item_quantities':self.robots[robot_id].items[self.robots[robot_id].pickup],
+                'shelf':shelf,
+                'item_quantities':self.robots[robot_id].items[shelf],
                 'start_time':self.robots[robot_id].start_time,
-                'pickup_time':self.robots[robot_id].pickup_time,
-                'drop_time':self.robots[robot_id].drop_time
+                'end_time':datetime.now()
             })
             csvfile.flush()
 
-        if len(self.robots[msg.data].shelves) > 0:
-            destination_shelf = self.robots[msg.data].shelves.pop(0)
-            self.robots[msg.data].set_goal(destination_shelf, self.shelves[destination_shelf])
+        if shelf == "drop_counter":
+            self.robots[robot_id].available = True
+        else:
+            self.inventory[shelf] -= self.robots[robot_id].goal['items']
+            rospy.loginfo(f"items left in {shelf} are {self.inventory[shelf]}")
+            destination_shelf = self.robots[robot_id].shelves.pop(0)
+            self.robots[robot_id].set_goal(destination_shelf, self.shelves[destination_shelf])
             # calculate the ETA
             self.calculate_eta(destination_shelf)
             # publish goal
-            self.publish_goal(self.robots[msg.data])
-            rospy.loginfo(f"Next destination for robot {msg.data} is {destination_shelf}")
-        else:
-            self.robots[msg.data].available = True
+            self.publish_goal(self.robots[robot_id])
+            self.robots[robot_id].start_time = datetime.now()
+            rospy.loginfo(f"Next destination for robot {robot_id} is {destination_shelf}")
 
     def publish_goal(self, robot):
         goal = PoseStamped()
         goal.pose.position.x = robot.goal['x']
         goal.pose.position.y = robot.goal['y']
-        goal.pose.position.z = 0.0
+        goal.pose.orientation.z = robot.goal['z']
+        goal.pose.orientation.w = robot.goal['w']
         goal.header.frame_id = 'map'  # Adjust according to your frame
         self.goal_publishers[robot.id].publish(goal)
 
@@ -160,7 +148,7 @@ class WarehouseManager:
     def main_loop(self):
         print('create')
         with open('log.csv', 'w', newline='') as csvfile:
-            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantities', 'start_time', 'pickup_time', 'drop_time']
+            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantities', 'start_time', 'end_time']
             self.writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             self.writer.writeheader()
         rate = rospy.Rate(1)  # 1 Hz
