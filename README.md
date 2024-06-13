@@ -119,10 +119,16 @@ roslaunch mrtd_pkg world.launch
 ```
 
 ## SM_Module
-
+Run the ROS node for shared memory module from the shared_memory package folder. 
+```
+rosrun shared_memory shared_memory.py
+```
 ## TM_Module
-
-
+Run the python executable for task distributor from the scr folder.
+```
+cd ~/catkin_ws/src
+python3 task_distributor.py
+```
 
 
 
