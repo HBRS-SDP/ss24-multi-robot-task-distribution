@@ -1,0 +1,8 @@
+prefix=/home/ibrahim/sdp_ws/src/mrtd_pkg/build/devel
+
+Name: mrtd_pkg
+Description: Description of mrtd_pkg
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

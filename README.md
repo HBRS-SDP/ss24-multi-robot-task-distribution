@@ -76,10 +76,62 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
 
  * You need ROS Noetic version to use these packages.
 
+# Running Simulation
+
+## Prerequisites
+
+Make sure you have the following installed on your system:
+- ROS (Robot Operating System) - [Installation Guide](http://wiki.ros.org/ROS/Installation)
+- Git
+
+### 1. Create a ROS Workspace
+
+First, create a new ROS workspace and initialize it:
+
+```bash
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/
+catkin_make
+
+source devel/setup.bash
+
+```
+Clone the Package
+Navigate to the src directory of your workspace and clone the repository:
+```bash
+cd ~/catkin_ws/src
+git clone git@github.com:HBRS-SDP/ss24-multi-robot-task-distribution.git
+```
+Build the Package
+After cloning the repository, go back to the root of your workspace and build it using 
+```
+catkin_make
+```
+## Run the Nodes
+You can now run the nodes provided by your package. Open a new terminal, source the workspace, and use rosrun or roslaunch to start your nodes:
+
+```bash
+# Source the workspace
+source ~/catkin_ws/devel/setup.bash
+
+roslaunch mrtd_pkg warehouse.launch
+roslaunch mrtd_pkg world.launch
+```
+
+## SM_Module
+Run the ROS node for shared memory module from the shared_memory package folder. 
+```
+rosrun shared_memory shared_memory.py
+```
+## TM_Module
+Run the python executable for task distributor from the scr folder.
+```
+cd ~/catkin_ws/src
+python3 task_distributor.py
+```
 
 
 
 
-# INPROGRESS  
  
 
