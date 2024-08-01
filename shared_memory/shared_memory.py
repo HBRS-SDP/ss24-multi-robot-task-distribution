@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 
 import rospy
-import zmq
 import csv
 from datetime import datetime
-from std_msgs.msg import String, Int32
-from geometry_msgs.msg import PoseStamped
-from std_srvs.srv import Empty, EmptyRequest
+from std_msgs.msg import Int32
 from robot_status import RobotState
-from ss24_multi_robot_task_distribution.srv import TaskService
-from ss24_multi_robot_task_distribution.msg import TaskRequest, ShelfGoalPose, TaskResponse
-import time
 
 
 class WarehouseManager:
@@ -28,24 +22,14 @@ class WarehouseManager:
         self.initialize_robots(self.num_robots)
 
         # Subscribers
-        rospy.Subscriber('/goal_reached', Int32, self.handle_goal_reached)
+        # rospy.Subscriber('/order_assignment', Int32, self.log_order_assignment)
+        rospy.Subscriber('/goal_start', Int32, self.log_goal_start)
+        rospy.Subscriber('/goal_reach', Int32, self.log_goal_reach)
 
-        # Publishers
-        self.goal_publishers = {}
-        for robot_id in range(0, self.num_robots):
-            topic_name = f'/robot{robot_id}/goal'
-            self.goal_publishers[robot_id] = rospy.Publisher(topic_name, PoseStamped, queue_size=10, latch = True)
 
-        # Service clients
-        # self.task_client = rospy.ServiceProxy('/task_distributor/get_task', TaskService)
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
+        self.robots_activity_writer = None
+        self.orders_assignment_writer = None
 
-        self.writer = None
-
-        # Main loop
-        self.main_loop()
 
     def read_inventory_init_status(self, filename):
         with open(filename, 'r') as file:
@@ -65,103 +49,55 @@ class WarehouseManager:
         for i in range(num_robots):
             self.robots.append(RobotState(i))
 
-    def handle_goal_reached(self, msg):
-        robot_id = msg.data
-        shelf = self.robots[robot_id].goal['shelf']
-        rospy.loginfo(f"robot {msg.data} reached {shelf}")
+    def log_goal_start(self, msg):
+        robot_id = msg.robot_id
+        self.robots[robot_id].assign_task(msg.client_id, msg.shelf, msg.items)
+        self.calculate_eta(robot_id)
+
+    def log_goal_reach(self, msg):
+        robot_id = msg.robot_id
+        self.robots[robot_id].end_time = datetime.now()
+        robot = self.robots[robot_id]
+        rospy.loginfo(f"robot {robot.id} reached {robot.shelf}")
         with open('log.csv', 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=self.writer.fieldnames)
+            writer = csv.DictWriter(csvfile, fieldnames=self.robots_activity_writer.fieldnames)
             writer.writerow({
                 'timestamp': datetime.now(),
-                'robot_id': robot_id,
-                'client_id': self.robots[robot_id].clientID,
-                'shelf':shelf,
-                'item_quantities':self.robots[robot_id].items[shelf],
-                'start_time':self.robots[robot_id].start_time,
-                'end_time':datetime.now()
+                'robot_id': robot.id,
+                'client_id': robot.clientID,
+                'shelf': robot.shelf,
+                'item_quantities': robot.items,
+                'start_time': robot.start_time,
+                'end_time': datetime.now()
             })
             csvfile.flush()
 
-        if shelf == "drop_counter":
-            self.robots[robot_id].available = True
-        else:
-            self.inventory[shelf] -= self.robots[robot_id].goal['items']
-            rospy.loginfo(f"items left in {shelf} are {self.inventory[shelf]}")
-            destination_shelf = self.robots[robot_id].shelves.pop(0)
-            self.robots[robot_id].set_goal(destination_shelf, self.shelves[destination_shelf])
-            # calculate the ETA
-            self.calculate_eta(destination_shelf)
-            # publish goal
-            self.publish_goal(self.robots[robot_id])
-            self.robots[robot_id].start_time = datetime.now()
-            rospy.loginfo(f"Next destination for robot {robot_id} is {destination_shelf}")
+        if robot.shelf != "drop_counter":
+            self.inventory[robot.shelf] -= robot.items
+            rospy.loginfo(f"items left in {robot.shelf} are {self.inventory[robot.shelf]}")
 
-    def publish_goal(self, robot):
-        goal = PoseStamped()
-        goal.header.frame_id = 'map'
-        goal.header.stamp = rospy.Time.now()
-        goal.pose.position.x = robot.goal['x']
-        goal.pose.position.y = robot.goal['y']
-        goal.pose.orientation.z = robot.goal['z']
-        goal.pose.orientation.w = robot.goal['w']
-        self.goal_publishers[robot.id].publish(goal)
+        self.robots[robot_id].reset()
 
-        # below is a custom msg to publish goal. maybe used later when we actually add pick up functionality to
-        # robot. Right now the robot does not have manipulation capabilities to pick up. we just make it wait and
-        # assume it has picked up
 
-        # goal_msg = ShelfGoalPose()
-        # goal_msg.robot_id = robot.id
-        # goal_msg.x = robot.goal['x']
-        # goal_msg.y = robot.goal['y']
-        # goal_msg.w = robot.goal['w']
-        # goal_msg.items = robot.goal['items']
-        # self.goal_pub.publish(goal_msg)
-        rospy.loginfo(f"Published goal for {robot.id}")
+    def calculate_eta(self, robot_id):
+        pass
 
-    def request_task(self, robot_id):
-        task_request = TaskRequest()
-        task_request.robot_id = robot_id
-
-        # Call the task distributor with zmq
-        self.socket.send_json({'robot_id': robot_id})
-        response = self.socket.recv_json()
-        rospy.loginfo(f"Requested new task from task distributor for robot {robot_id}")
-
-        # assign client order to robot
-        self.robots[robot_id].assign_order(response['client_id'], response['shelves'], response['item_quantities'])
-        # set the next goal destination
-        destination_shelf = self.robots[robot_id].shelves.pop(0)
-        self.robots[robot_id].set_goal(destination_shelf, self.shelves[destination_shelf])
-        # calculate the ETA
-        self.calculate_eta(destination_shelf)
-        # publish goal
-        self.publish_goal(self.robots[robot_id])
-        self.robots[robot_id].available = False
-        rospy.loginfo(f"Next destination for robot {robot_id} is {destination_shelf}")
-        self.robots[robot_id].start_time = datetime.now()
-
-    def calculate_eta(self, destination):
-        # Mockup ETA calculation
-        eta = 10  # Assume 10 seconds for simplicity
-        rospy.loginfo(f"Calculated ETA to shelf {destination}: {eta} seconds")
-
-    def main_loop(self):
-        print('create')
-        with open('log.csv', 'w', newline='') as csvfile:
-            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantities', 'start_time', 'end_time']
-            self.writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            self.writer.writeheader()
-        rate = rospy.Rate(1)  # 1 Hz
-        while not rospy.is_shutdown():
-            for robot in self.robots:
-                if robot.available:
-                    self.request_task(robot.id)
-                    rate.sleep()
+    def main(self):
+        with open('robots_log.csv', 'w', newline='') as csvfile:
+            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantity', 'start_time', 'end_time', 'eta']
+            self.robots_activity_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            self.robots_activity_writer.writeheader()
+        # with open('orders_log.csv', 'w', newline='') as csvfile:
+        #     fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelves', 'items_quantities']
+        #     self.orders_assignment_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        #     self.orders_assignment_writer.writeheader()
+        rospy.spin()
 
 
 if __name__ == '__main__':
     try:
         manager = WarehouseManager()
+        manager.main()
+
     except rospy.ROSInterruptException:
         pass
