@@ -10,9 +10,9 @@ from geometry_msgs.msg import PoseStamped
 from shared_memory.msg import goal_start_msg, goal_reach_msg
 
 class Worker:
-    def __init__(self):
+    def __init__(self, robot_id):
         rospy.init_node('multi_goal_sender', anonymous=True)
-        self.robot_id = 0
+        self.robot_id = robot_id
         self.is_available = True
         self.clientID = None
         self.order_shelves = []
@@ -20,7 +20,7 @@ class Worker:
         self.shelves_pose = {}
         self.read_shelves_pose('data/shelves_details.csv')
 
-        self.client = actionlib.SimpleActionClient('/move_base', MoveBaseAction)
+        self.client = actionlib.SimpleActionClient(f'/{robot_id}/move_base', MoveBaseAction)
         self.client.wait_for_server()
 
         # Publisher to indicate goal completion
@@ -158,6 +158,7 @@ class Worker:
 
 if __name__ == '__main__':
     try:
-        manager = Worker()
+        robot_id = input("enter robot id")
+        manager = Worker(robot_id)
     except rospy.ROSInterruptException:
         pass
