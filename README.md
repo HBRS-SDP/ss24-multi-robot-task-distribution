@@ -130,8 +130,33 @@ cd ~/catkin_ws/src
 python3 task_distributor.py
 ```
 
+## Overall steps to run - for single robot
 
-
-
- 
+1. run each of the below commands in new terminals
+```
+roscore
+```
+```
+export TURTLEBOT3_MODEL=burger
+```
+```
+roslaunch mrtd_pkg world.launch
+```
+```
+roslaunch mrtd_pkg warehouse.launch
+```
+2. got to TaskDistributor directory and run each of the below commands in new terminals
+```
+python3 broker.py
+```
+```
+python3 client.py sample_orders.csv
+```
+3. go to shared_memory directory and run each of the below commands in new terminals
+```
+rosrun shared_memory shared_memory_node.py
+```
+```
+rosrun mrtd_pkg nav2goal.py
+``` 
 
