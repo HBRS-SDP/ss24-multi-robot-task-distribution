@@ -3,9 +3,8 @@
 import rospy
 import csv
 from datetime import datetime
-from std_msgs.msg import Int32
 from robot_status import RobotState
-
+from shared_memory.msg import goal_start_msg, goal_reach_msg
 
 class WarehouseManager:
     def __init__(self):
@@ -23,8 +22,8 @@ class WarehouseManager:
 
         # Subscribers
         # rospy.Subscriber('/order_assignment', Int32, self.log_order_assignment)
-        rospy.Subscriber('/goal_start', Int32, self.log_goal_start)
-        rospy.Subscriber('/goal_reach', Int32, self.log_goal_reach)
+        rospy.Subscriber('/goal_start', goal_start_msg, self.log_goal_start)
+        rospy.Subscriber('/goal_reach', goal_reach_msg, self.log_goal_reach)
 
 
         self.robots_activity_writer = None
@@ -51,11 +50,16 @@ class WarehouseManager:
 
     def log_goal_start(self, msg):
         robot_id = msg.robot_id
+
+        while self.robots[robot_id].saving:
+            continue
+        rospy.loginfo(f"robot {robot_id} going to shelf {msg.shelf}")
         self.robots[robot_id].assign_task(msg.client_id, msg.shelf, msg.items)
         self.calculate_eta(robot_id)
 
     def log_goal_reach(self, msg):
         robot_id = msg.robot_id
+        self.robots[robot_id].saving = True
         self.robots[robot_id].end_time = datetime.now()
         robot = self.robots[robot_id]
         rospy.loginfo(f"robot {robot.id} reached {robot.shelf}")
@@ -66,11 +70,12 @@ class WarehouseManager:
                 'robot_id': robot.id,
                 'client_id': robot.clientID,
                 'shelf': robot.shelf,
-                'item_quantities': robot.items,
+                'item_quantity': robot.items,
                 'start_time': robot.start_time,
                 'end_time': datetime.now()
             })
             csvfile.flush()
+        self.robots[robot_id].saving = False
 
         if robot.shelf != "drop_counter":
             self.inventory[robot.shelf] -= robot.items

@@ -11,6 +11,7 @@ class RobotState:
         self.start_time = None
         self.end_time = None
         self.eta = None
+        self.saving = False
 
     def assign_task(self, client_id, shelf, items):
         self.clientID = client_id

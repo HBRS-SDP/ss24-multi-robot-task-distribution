@@ -7,10 +7,9 @@ import zmq
 import csv
 from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseStamped
-from ss24_multi_robot_task_distribution.msg import TaskRequest, ShelfGoalPose, TaskResponse
+from shared_memory.msg import goal_start_msg, goal_reach_msg
 
-
-class MultiGoalSender:
+class Worker:
     def __init__(self):
         rospy.init_node('multi_goal_sender', anonymous=True)
         self.robot_id = 0
@@ -25,7 +24,8 @@ class MultiGoalSender:
         self.client.wait_for_server()
 
         # Publisher to indicate goal completion
-        self.goal_reached_publisher = rospy.Publisher('/goal_reached', Int32, queue_size=10)
+        self.goal_start_publisher = rospy.Publisher('/goal_start', goal_start_msg, queue_size=10, latch=True)
+        self.goal_reached_publisher = rospy.Publisher('/goal_reach', goal_reach_msg, queue_size=10, latch=True)
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
@@ -66,7 +66,17 @@ class MultiGoalSender:
         goal_msg.target_pose = goal_pose
         self.client.send_goal(goal_msg)
         rospy.loginfo(f"Published goal for robot {self.robot_id}")
+
+        goal_details = goal_start_msg()
+        goal_details.robot_id = self.robot_id
+        goal_details.client_id = self.clientID
+        goal_details.shelf = goal['shelf']
+        goal_details.items = goal['items']
+        self.goal_start_publisher.publish(goal_details)
+
         self.client.wait_for_result()
+
+
 
         # below is a custom msg to publish goal. maybe used later when we actually add pick up functionality to
         # robot. Right now the robot does not have manipulation capabilities to pick up. we just make it wait and
@@ -81,8 +91,6 @@ class MultiGoalSender:
         # self.goal_pub.publish(goal_msg)
 
     def request_task(self, robot_id):
-        task_request = TaskRequest()
-        task_request.robot_id = robot_id
 
         # Call the task distributor with zmq
         self.socket.send_json({'robot_id': robot_id})
@@ -101,20 +109,55 @@ class MultiGoalSender:
         return goal
 
     def main_loop(self):
+        print('in main')
         rate = rospy.Rate(1)  # 1 Hz
+        # Create a ZeroMQ context
+        context = zmq.Context()
+
+        # Create a REQ socket (request-reply pattern) for worker communication
+        socket = context.socket(zmq.REQ)
+
+        # Set a unique identity for the worker and connect to the broker
+        socket.identity = u"Worker-{}".format(self.robot_id).encode("ascii")
+        socket.connect("tcp://localhost:5556")
+
+        # Notify the broker that the worker is ready for work
+        socket.send(b"READY")
+
+        print(f"Worker {self.robot_id} is running...")
+
         while not rospy.is_shutdown():
             if self.is_available:
                 if len(self.order_shelves) <= 0:
-                    self.request_task(self.robot_id)
+                    # Wait for a task from the broker
+                    address, empty, request = socket.recv_multipart()
+                    rospy.loginfo(f"Requested new task from task distributor for robot {self.robot_id}")
+                    print(f"Worker {self.robot_id} received task: {request.decode('ascii')}")
+
+                    msg = f"Will be Processed by Worker-{self.robot_id}: {request.decode('ascii')}"
+
+                    # Send the result message back
+                    socket.send_multipart([address, b"", msg.encode('ascii')])
+                    request = eval(request.decode('ascii'))
+                    # assign client order to robot
+                    self.assign_order(request['client_id'], request['shelves'], request['item_quantities'])
+
+                    # Notify the broker that the worker is ready for new tasks
+                    # socket.send(b"READY")
+
                 goal = self.get_next_goal()
                 self.publish_goal(goal)
-                self.goal_reached_publisher.publish(Int32(self.robot_id))
+
+                goal_reach_details = goal_reach_msg()
+                goal_reach_details.robot_id = self.robot_id
+                self.goal_reached_publisher.publish(goal_reach_details)
+                
                 self.is_available = True
                 rate.sleep()
 
 
 if __name__ == '__main__':
     try:
-        manager = MultiGoalSender()
+        manager = Worker()
     except rospy.ROSInterruptException:
         pass

@@ -15,7 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
 # Add any message files here
 add_message_files(
   FILES
-  ShelfGoalPose.msg
+  goal_start_msg.msg
+  goal_reach_msg.msg
 )
 
 
