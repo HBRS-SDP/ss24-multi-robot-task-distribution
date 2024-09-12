@@ -1,6 +1,11 @@
 # Task Distribution Overview
 
-In this multi-robot system, task distribution is handled by the broker using ZMQ. The broker ensures that tasks from the client are evenly distributed among workers (robots), based on their availability. Here's the core concept of the task distribution algorithm:
+In this multi-robot system, task distribution is handled by the broker using ZMQ. The broker ensures that tasks from the client are evenly distributed among workers (robots), based on their availability. 
+
+Reference:
+
+- https://zguide.zeromq.org/docs/chapter3/
+- https://zeromq.org/
 
 ## Task Distribution Workflow
 
