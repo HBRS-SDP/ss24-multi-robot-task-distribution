@@ -20,8 +20,12 @@ class Worker:
         self.shelves_pose = {}
         self.read_shelves_pose('data/shelves_details.csv')
 
-        self.client = actionlib.SimpleActionClient(f'/{robot_id}/move_base', MoveBaseAction)
+        self.client = actionlib.SimpleActionClient('/tb3_1/move_base_simple/goal', MoveBaseAction)
+        rospy.loginfo("client initiated")
         self.client.wait_for_server()
+        rospy.loginfo("client found yeahhh")
+
+       
 
         # Publisher to indicate goal completion
         self.goal_start_publisher = rospy.Publisher('/goal_start', goal_start_msg, queue_size=10, latch=True)
