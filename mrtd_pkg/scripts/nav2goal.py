@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import rospy
-import actionlib
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 import zmq
 import csv
-from std_msgs.msg import String, Int32
 from geometry_msgs.msg import PoseStamped
+from move_base_msgs.msg import MoveBaseActionResult
 from shared_memory.msg import goal_start_msg, goal_reach_msg
 
 class Worker:
@@ -20,16 +18,12 @@ class Worker:
         self.shelves_pose = {}
         self.read_shelves_pose('data/shelves_details.csv')
 
-        self.client = actionlib.SimpleActionClient('/tb3_1/move_base_simple/goal', MoveBaseAction)
-        rospy.loginfo("client initiated")
-        self.client.wait_for_server()
-        rospy.loginfo("client found yeahhh")
 
-       
-
-        # Publisher to indicate goal completion
+        self.goal_publisher = rospy.Publisher(f"/tb3_{self.robot_id}/move_base_simple/goal", PoseStamped, queue_size=10, latch=True)
         self.goal_start_publisher = rospy.Publisher('/goal_start', goal_start_msg, queue_size=10, latch=True)
         self.goal_reached_publisher = rospy.Publisher('/goal_reach', goal_reach_msg, queue_size=10, latch=True)
+
+        rospy.Subscriber(f"/tb3_{self.robot_id}/move_base/result", MoveBaseActionResult, self.goal_reach_callback)
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
@@ -66,9 +60,7 @@ class Worker:
         goal_pose.pose.position.y = goal['y']
         goal_pose.pose.orientation.z = goal['z']
         goal_pose.pose.orientation.w = goal['w']
-        goal_msg = MoveBaseGoal()
-        goal_msg.target_pose = goal_pose
-        self.client.send_goal(goal_msg)
+        self.goal_publisher.publish(goal_pose)
         rospy.loginfo(f"Published goal for robot {self.robot_id}")
 
         goal_details = goal_start_msg()
@@ -77,10 +69,6 @@ class Worker:
         goal_details.shelf = goal['shelf']
         goal_details.items = goal['items']
         self.goal_start_publisher.publish(goal_details)
-
-        self.client.wait_for_result()
-
-
 
         # below is a custom msg to publish goal. maybe used later when we actually add pick up functionality to
         # robot. Right now the robot does not have manipulation capabilities to pick up. we just make it wait and
@@ -93,6 +81,13 @@ class Worker:
         # goal_msg.w = robot.goal['w']
         # goal_msg.items = robot.goal['items']
         # self.goal_pub.publish(goal_msg)
+
+    def goal_reach_callback(self, msg):
+        goal_reach_details = goal_reach_msg()
+        goal_reach_details.robot_id = self.robot_id
+        self.goal_reached_publisher.publish(goal_reach_details)
+
+        self.is_available = True
 
     def request_task(self, robot_id):
 
@@ -151,12 +146,6 @@ class Worker:
 
                 goal = self.get_next_goal()
                 self.publish_goal(goal)
-
-                goal_reach_details = goal_reach_msg()
-                goal_reach_details.robot_id = self.robot_id
-                self.goal_reached_publisher.publish(goal_reach_details)
-                
-                self.is_available = True
                 rate.sleep()
 
 

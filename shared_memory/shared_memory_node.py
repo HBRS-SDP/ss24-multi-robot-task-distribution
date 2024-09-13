@@ -36,7 +36,7 @@ class WarehouseManager:
             for row in reader:
                 shelf_name = row['Shelf']
                 item_quantity = int(row['Quantity'])
-                self.inventory[shelf_name] = item_quantity
+                self.inventory[shelf_name] = {'init':item_quantity, 'remaining': item_quantity}
                 self.shelves[shelf_name] = {
                     'x': float(row['X']),
                     'y': float(row['Y']),
@@ -62,6 +62,10 @@ class WarehouseManager:
         self.robots[robot_id].saving = True
         self.robots[robot_id].end_time = datetime.now()
         robot = self.robots[robot_id]
+        if robot.shelf != "drop_counter":
+            self.inventory[robot.shelf]['remaining'] -= robot.items
+            rospy.loginfo(f"items left in {robot.shelf} are {self.inventory[robot.shelf]['remaining']}")
+
         rospy.loginfo(f"robot {robot.id} reached {robot.shelf}")
         with open('log.csv', 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.robots_activity_writer.fieldnames)
@@ -72,15 +76,12 @@ class WarehouseManager:
                 'shelf': robot.shelf,
                 'item_quantity': robot.items,
                 'start_time': robot.start_time,
-                'end_time': datetime.now()
+                'end_time': datetime.now(),
+                'init_items_on_shelf': self.inventory[robot.shelf]['init'],
+                'items_remaining': self.inventory[robot.shelf]['remaining']
             })
             csvfile.flush()
         self.robots[robot_id].saving = False
-
-        if robot.shelf != "drop_counter":
-            self.inventory[robot.shelf] -= robot.items
-            rospy.loginfo(f"items left in {robot.shelf} are {self.inventory[robot.shelf]}")
-
         self.robots[robot_id].reset()
 
 
