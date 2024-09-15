@@ -1,0 +1,20 @@
+local_costmap:
+  global_frame: map
+  robot_base_frame: tb3_1_tf/base_footprint
+
+  update_frequency: 1.0
+  publish_frequency: 1.0
+  transform_tolerance: 0.5  
+
+  static_map: false
+  rolling_window: true
+
+  width: 3  # Increase the width of the map
+  height: 3  # Increase the height of the map
+  # origin_x: -5  # Adjust the map's origin to include the sensor's coordinates
+  # origin_y: -5
+  # width: 1
+  # height: 1
+  resolution: 0.1
+  
+

@@ -54,12 +54,10 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
       
 
 
-* Shared memory module which acts as open source of information which is available to entire system including robots.
-    * No of items on each shelves must be universal knowledge for system
-    * Analytical data such as Real Arrival time, Estimated Arrival time, Start positions and end positions, No of parcels dropped.
+* 
+## Architecture & Flow chart 
 
-
-* Documentation covering system architecture, algorithms, and usage guidelines.
+![Flow_chart](img/sdp_flowchart.png)
 
 
 ## Tools/Software Used
@@ -75,6 +73,10 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
  # Installation and Project setup.
 
  * You need ROS Noetic version to use these packages.
+
+    please install ros noetic using this link and instructions
+    https://wiki.ros.org/noetic/Installation
+
 
 # Running Simulation
 
@@ -114,11 +116,32 @@ You can now run the nodes provided by your package. Open a new terminal, source 
 # Source the workspace
 source ~/catkin_ws/devel/setup.bash
 
-roslaunch mrtd_pkg warehouse.launch
-roslaunch mrtd_pkg world.launch
+roslaunch turtlebot3_gazebo multi_turtlebot3_closeworld2.launch
+roslaunch turtlebot3_navigation turtlebot3_navigation.launch 
 ```
+![Gazebo](img/gazebo.png)
+![Rviz](img/rviz.png)
 
 ## SM_Module
+
+Shared Memory Module logs he robot activities and manages the Inventory. It integrates with ROS to handle real-time updates and communicate with robots.
+
+* Inventory Management
+Initialization: Reads shelf and inventory details from a CSV file to set up initial inventory quantities and shelf locations.
+Update: Adjusts inventory levels as robots complete tasks, ensuring the correct number of items is tracked.
+
+* Robot Activity Logging
+Initialization: Sets up a specified number of robots, each represented by a RobotState object.
+Goal Start: Logs the initiation of tasks by robots, including the details of the shelf and items involved.
+Goal Reach: Logs when a robot reaches its destination. Updates the inventory based on the completed task and records detailed activity in a CSV file.
+
+* Overall Operation
+Setup: Initializes the inventory and robots. Configures subscriptions to ROS topics for real-time updates on robot tasks.
+Monitoring: Continuously listens for goal start and reach messages to manage tasks and update logs.
+Logging: Maintains detailed logs of robot activities and inventory changes for tracking and analysis.
+* Documentation covering system architecture, algorithms, and usage guidelines.
+
+
 Run the ROS node for shared memory module from the shared_memory package folder. 
 ```
 rosrun shared_memory shared_memory.py
@@ -130,8 +153,108 @@ cd ~/catkin_ws/src
 python3 task_distributor.py
 ```
 
+## Overall steps to run - for single robot
+
+1. run each of the below commands in new terminals
+```
+roscore
+```
+```
+export TURTLEBOT3_MODEL=burger
+```
+```
+roslaunch mrtd_pkg world.launch
+```
+```
+roslaunch mrtd_pkg warehouse.launch
+```
+2. got to TaskDistributor directory and run each of the below commands in new terminals
+```
+python3 broker.py
+```
+```
+python3 client.py sample_orders.csv
+```
+3. go to shared_memory directory and run each of the below commands in new terminals
+```
+rosrun shared_memory shared_memory_node.py
+```
+```
+rosrun mrtd_pkg nav2goal.py
+``` 
+
+please add the robot_id which is 0 and 1.
 
 
 
- 
+# Task Distribution Overview
+
+In this multi-robot system, task distribution is handled by the broker using ZMQ. The broker ensures that tasks from the client are evenly distributed among workers (robots), based on their availability. 
+
+
+
+<img src="https://github.com/user-attachments/assets/1df93716-8e9d-405a-89dd-c5b3a36a2774" width="400"/>
+
+ZMQ Request-Reply Architecture 
+
+
+Reference:
+
+- https://zguide.zeromq.org/docs/chapter3/
+- https://zeromq.org/
+
+
+
+## Task Distribution Workflow
+
+
+### Initialization:
+- The broker starts and binds two sockets:
+  - **Frontend Socket (port 5555)**: To handle client requests (tasks).
+  - **Backend Socket (port 5556)**: To manage communication with the workers.
+- A poller is initialized to monitor both sockets for incoming messages.
+- The broker maintains two lists:
+  - `workers[]`: Tracks available workers (robots) that are ready to take on tasks.
+  - `tasks[]`: Queues incoming tasks from the client.
+
+
+### Worker Availability :
+- Each worker, upon startup, sends a `READY` message to the broker. This signals the broker that the worker is available for tasks.
+- The broker adds the worker to the `workers[]` list.
+
+**Key Event**: Worker sends `READY` → Broker adds worker to the available workers list.
+
+
+### Task Arrival (Client Sends a Task):
+- The client submits a task to the broker via the **frontend socket**.
+- The task is stored in the `tasks[]` queue until a worker becomes available.
+
+**Key Event**: Client sends a task → Broker adds task to the task queue.
+
+
+### Task Assignment:
+- The broker continually monitors both the `tasks[]` queue and the `workers[]` list.
+- When both a task and a worker are available, the broker assigns the task to the next available worker.
+- **Task Assignment Strategy**:
+  - The broker selects the first available worker from the `workers[]` list (FIFO).
+  - The broker removes the worker from the available list and assigns the task.
+
+**Key Event**: Task is available + Worker is available → Broker sends task to worker.
+
+
+### Task Completion:
+- Once a worker completes a task, it sends the result back to the broker.
+- The broker forwards this result to the client and adds the worker back to the `workers[]` list, marking it as ready for a new task.
+
+**Key Event**: Worker completes task → Broker receives result and marks worker as available.
+
+### Continuous Polling:
+- The broker continuously polls both the **frontend** (for tasks) and **backend** (for worker availability and task results).
+- The cycle repeats, ensuring that tasks are distributed evenly among workers, and no worker is overloaded.
+
+# Demo Video
+## Links:
+* https://youtu.be/UtQDjkJtfoQ 
+* https://youtu.be/asg0zFYG6K0
+
 
