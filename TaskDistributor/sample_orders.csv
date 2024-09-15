@@ -1,6 +1,6 @@
 Client,Shelf_1,Shelf_2,Shelf_3,Shelf_4,Quantity_1,Quantity_2,Quantity_3,Quantity_4
-client1,A,B,C,D,19,4,23,11
-client2,A,B,C,D,16,8,1,20
+client1,D,A,B,C,19,4,23,11
+client2,B,C,A,D,16,8,1,20
 client3,A,B,C,D,17,7,5,14
 client4,A,B,C,D,20,8,19,11
 client5,A,B,C,D,23,9,11,12
