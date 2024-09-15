@@ -182,3 +182,9 @@ rosrun mrtd_pkg nav2goal.py
 
 please add the robot_id which is 0 and 1.
 
+# Demo Video
+## Links:
+* https://youtu.be/UtQDjkJtfoQ 
+* https://youtu.be/asg0zFYG6K0
+
+
