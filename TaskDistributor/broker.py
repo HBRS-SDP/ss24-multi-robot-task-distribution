@@ -25,11 +25,9 @@ def main():
             worker, empty, client = message[:3]
             workers.append(worker)  # Add the worker to the list of available workers
 
-        print(workers)
         if frontend in socks and workers:
             client, empty, request = frontend.recv_multipart()
             worker = workers.pop(0)  # Get the next available worker
-            print(request, worker)
             backend.send_multipart([worker, b"", client, b"", request])
             frontend.send_multipart([client, b"", b"sent"])
 
