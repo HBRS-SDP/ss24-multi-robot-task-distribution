@@ -54,14 +54,27 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
       
 
 
-* Shared memory module which acts as open source of information which is available to entire system including robots.
-    * No of items on each shelves must be universal knowledge for system
-    * Analytical data such as Real Arrival time, Estimated Arrival time, Start positions and end positions, No of parcels dropped.
+* Shared Memory Module logs he robot activities and manages the Inventory. It integrates with ROS to handle real-time updates and communicate with robots.
 
+* Inventory Management
+Initialization: Reads shelf and inventory details from a CSV file to set up initial inventory quantities and shelf locations.
+Update: Adjusts inventory levels as robots complete tasks, ensuring the correct number of items is tracked.
 
+* Robot Activity Logging
+Initialization: Sets up a specified number of robots, each represented by a RobotState object.
+Goal Start: Logs the initiation of tasks by robots, including the details of the shelf and items involved.
+Goal Reach: Logs when a robot reaches its destination. Updates the inventory based on the completed task and records detailed activity in a CSV file.
+
+* Overall Operation
+Setup: Initializes the inventory and robots. Configures subscriptions to ROS topics for real-time updates on robot tasks.
+Monitoring: Continuously listens for goal start and reach messages to manage tasks and update logs.
+Logging: Maintains detailed logs of robot activities and inventory changes for tracking and analysis.
 * Documentation covering system architecture, algorithms, and usage guidelines.
 
 ## Architecture & Flow chart 
+
+    ![Flow_chart](img/sdp_flowchart.png)
+
 
 ## Tools/Software Used
  * Ubuntu 20.04
