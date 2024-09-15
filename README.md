@@ -54,23 +54,7 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
       
 
 
-* Shared Memory Module logs he robot activities and manages the Inventory. It integrates with ROS to handle real-time updates and communicate with robots.
-
-* Inventory Management
-Initialization: Reads shelf and inventory details from a CSV file to set up initial inventory quantities and shelf locations.
-Update: Adjusts inventory levels as robots complete tasks, ensuring the correct number of items is tracked.
-
-* Robot Activity Logging
-Initialization: Sets up a specified number of robots, each represented by a RobotState object.
-Goal Start: Logs the initiation of tasks by robots, including the details of the shelf and items involved.
-Goal Reach: Logs when a robot reaches its destination. Updates the inventory based on the completed task and records detailed activity in a CSV file.
-
-* Overall Operation
-Setup: Initializes the inventory and robots. Configures subscriptions to ROS topics for real-time updates on robot tasks.
-Monitoring: Continuously listens for goal start and reach messages to manage tasks and update logs.
-Logging: Maintains detailed logs of robot activities and inventory changes for tracking and analysis.
-* Documentation covering system architecture, algorithms, and usage guidelines.
-
+* 
 ## Architecture & Flow chart 
 
 ![Flow_chart](img/sdp_flowchart.png)
@@ -139,6 +123,25 @@ roslaunch turtlebot3_navigation turtlebot3_navigation.launch
 ![Rviz](img/rviz.png)
 
 ## SM_Module
+
+Shared Memory Module logs he robot activities and manages the Inventory. It integrates with ROS to handle real-time updates and communicate with robots.
+
+* Inventory Management
+Initialization: Reads shelf and inventory details from a CSV file to set up initial inventory quantities and shelf locations.
+Update: Adjusts inventory levels as robots complete tasks, ensuring the correct number of items is tracked.
+
+* Robot Activity Logging
+Initialization: Sets up a specified number of robots, each represented by a RobotState object.
+Goal Start: Logs the initiation of tasks by robots, including the details of the shelf and items involved.
+Goal Reach: Logs when a robot reaches its destination. Updates the inventory based on the completed task and records detailed activity in a CSV file.
+
+* Overall Operation
+Setup: Initializes the inventory and robots. Configures subscriptions to ROS topics for real-time updates on robot tasks.
+Monitoring: Continuously listens for goal start and reach messages to manage tasks and update logs.
+Logging: Maintains detailed logs of robot activities and inventory changes for tracking and analysis.
+* Documentation covering system architecture, algorithms, and usage guidelines.
+
+
 Run the ROS node for shared memory module from the shared_memory package folder. 
 ```
 rosrun shared_memory shared_memory.py
