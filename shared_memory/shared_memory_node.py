@@ -67,7 +67,8 @@ class WarehouseManager:
             rospy.loginfo(f"items left in {robot.shelf} are {self.inventory[robot.shelf]['remaining']}")
 
         rospy.loginfo(f"robot {robot.id} reached {robot.shelf}")
-        with open('log.csv', 'a', newline='') as csvfile:
+        log_file = f'logs/log_{datetime.now()}.csv'
+        with open(log_file, 'a', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=self.robots_activity_writer.fieldnames)
             writer.writerow({
                 'timestamp': datetime.now(),
@@ -89,7 +90,8 @@ class WarehouseManager:
         pass
 
     def main(self):
-        with open('robots_log.csv', 'w', newline='') as csvfile:
+        log_file = f'logs/log_{datetime.now()}.csv'
+        with open(log_file, 'w', newline='') as csvfile:
             fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantity', 'start_time', 'end_time', 'items_remaining', 'init_items_on_shelf']
             self.robots_activity_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             self.robots_activity_writer.writeheader()
