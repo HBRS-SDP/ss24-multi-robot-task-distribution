@@ -25,10 +25,10 @@ class Worker:
 
         rospy.Subscriber(f"/tb3_{self.robot_id}/move_base/result", MoveBaseActionResult, self.goal_reach_callback)
 
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REQ)
-        self.socket.identity = u"Worker-{}".format(self.robot_id).encode("ascii")
-        self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
+        # self.context = zmq.Context()
+        # self.socket = self.context.socket(zmq.REQ)
+        # self.socket.identity = u"Worker-{}".format(self.robot_id).encode("ascii")
+        # self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
 
         # Main loop
         self.main_loop()
@@ -121,14 +121,16 @@ class Worker:
         socket.identity = u"Worker-{}".format(self.robot_id).encode("ascii")
         socket.connect("tcp://localhost:5556")
 
-        # Notify the broker that the worker is ready for work
-        socket.send(b"READY")
+
 
         print(f"Worker {self.robot_id} is running...")
 
         while not rospy.is_shutdown():
             if self.is_available:
                 if len(self.order_shelves) <= 0:
+                    # Notify the broker that the worker is ready for work
+                    socket.send(b"READY")
+                    print('requesting order')
                     # Wait for a task from the broker
                     address, empty, request = socket.recv_multipart()
                     rospy.loginfo(f"Requested new task from task distributor for robot {self.robot_id}")
@@ -137,7 +139,7 @@ class Worker:
                     msg = f"Will be Processed by Worker-{self.robot_id}: {request.decode('ascii')}"
 
                     # Send the result message back
-                    socket.send_multipart([address, b"", msg.encode('ascii')])
+                    # socket.send_multipart([address, b"", msg.encode('ascii')])
                     request = eval(request.decode('ascii'))
                     # assign client order to robot
                     self.assign_order(request['client_id'], request['shelves'], request['item_quantities'])
