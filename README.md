@@ -73,7 +73,7 @@ Logging: Maintains detailed logs of robot activities and inventory changes for t
 
 ## Architecture & Flow chart 
 
-    ![Flow_chart](img/sdp_flowchart.png)
+![Flow_chart](img/sdp_flowchart.png)
 
 
 ## Tools/Software Used
@@ -135,6 +135,8 @@ source ~/catkin_ws/devel/setup.bash
 roslaunch turtlebot3_gazebo multi_turtlebot3_closeworld2.launch
 roslaunch turtlebot3_navigation turtlebot3_navigation.launch 
 ```
+![Gazebo](img/gazebo.png)
+![Rviz](img/rviz.png)
 
 ## SM_Module
 Run the ROS node for shared memory module from the shared_memory package folder. 
