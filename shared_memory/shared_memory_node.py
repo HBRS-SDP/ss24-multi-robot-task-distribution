@@ -16,7 +16,7 @@ class WarehouseManager:
         self.read_inventory_init_status('data/shelves_details.csv')
 
         # Robot status and availability
-        self.num_robots = 1
+        self.num_robots = 2
         self.robots = []
         self.initialize_robots(self.num_robots)
 
@@ -90,7 +90,7 @@ class WarehouseManager:
 
     def main(self):
         with open('robots_log.csv', 'w', newline='') as csvfile:
-            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantity', 'start_time', 'end_time', 'eta']
+            fieldnames = ['timestamp', 'robot_id', 'client_id', 'shelf', 'item_quantity', 'start_time', 'end_time', 'items_remaining', 'init_items_on_shelf']
             self.robots_activity_writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             self.robots_activity_writer.writeheader()
         # with open('orders_log.csv', 'w', newline='') as csvfile:

@@ -27,6 +27,7 @@ class Worker:
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REQ)
+        self.socket.identity = u"Worker-{}".format(self.robot_id).encode("ascii")
         self.socket.connect("tcp://localhost:5555")  # Connect to the task distributor
 
         # Main loop
@@ -64,7 +65,7 @@ class Worker:
         rospy.loginfo(f"Published goal for robot {self.robot_id}")
 
         goal_details = goal_start_msg()
-        goal_details.robot_id = self.robot_id
+        goal_details.robot_id = int(self.robot_id)
         goal_details.client_id = self.clientID
         goal_details.shelf = goal['shelf']
         goal_details.items = goal['items']
@@ -84,7 +85,7 @@ class Worker:
 
     def goal_reach_callback(self, msg):
         goal_reach_details = goal_reach_msg()
-        goal_reach_details.robot_id = self.robot_id
+        goal_reach_details.robot_id = int(self.robot_id)
         self.goal_reached_publisher.publish(goal_reach_details)
 
         self.is_available = True
