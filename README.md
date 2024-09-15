@@ -61,6 +61,7 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
 
 * Documentation covering system architecture, algorithms, and usage guidelines.
 
+## Architecture & Flow chart 
 
 ## Tools/Software Used
  * Ubuntu 20.04
@@ -75,6 +76,10 @@ Navigatation of multiple robot with shared memory which fulfills the consolidati
  # Installation and Project setup.
 
  * You need ROS Noetic version to use these packages.
+
+    please install ros noetic using this link and instructions
+    https://wiki.ros.org/noetic/Installation
+
 
 # Running Simulation
 
@@ -114,8 +119,8 @@ You can now run the nodes provided by your package. Open a new terminal, source 
 # Source the workspace
 source ~/catkin_ws/devel/setup.bash
 
-roslaunch mrtd_pkg warehouse.launch
-roslaunch mrtd_pkg world.launch
+roslaunch turtlebot3_gazebo multi_turtlebot3_closeworld2.launch
+roslaunch turtlebot3_navigation turtlebot3_navigation.launch 
 ```
 
 ## SM_Module
@@ -159,4 +164,6 @@ rosrun shared_memory shared_memory_node.py
 ```
 rosrun mrtd_pkg nav2goal.py
 ``` 
+
+please add the robot_id which is 0 and 1.
 
